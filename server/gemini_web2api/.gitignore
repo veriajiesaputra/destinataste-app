@@ -1,0 +1,8 @@
+config.json
+cookie.txt
+.env
+*.log
+*.bak
+.omo/
+__pycache__/
+*.pyc
