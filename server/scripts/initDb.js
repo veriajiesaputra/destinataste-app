@@ -11,6 +11,13 @@ const DB_CONFIG = {
   port: Number(process.env.DB_PORT) || 3306,
 };
 
+if (process.env.DB_SSL === 'true' || Number(process.env.DB_PORT) === 4000) {
+  DB_CONFIG.ssl = {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: true,
+  };
+}
+
 const DB_NAME = process.env.DB_NAME || 'destinataste_db';
 
 export const INITIAL_CATEGORIES = [
