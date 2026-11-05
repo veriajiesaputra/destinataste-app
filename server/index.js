@@ -42,7 +42,14 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// Root Healthcheck
+// Root & Healthcheck
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Selamat datang di DestinaTaste API! Backend aktif melayani.',
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
