@@ -1,129 +1,208 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import { useAuth } from '../context/AuthContext';
+import { fetchDestinations, fetchCategories, fetchFavoriteIds, toggleFavorite } from '../services/api';
 
-// 1. Data Kategori Cepat
-const INITIAL_CATEGORIES = [
-  { id: 'alam', name: 'Wisata Alam', icon: '🌲', sub: 'Guci & Curug', type: 'Wisata' },
-  { id: 'kuliner', name: 'Kuliner Tradisional', icon: '🍲', sub: 'Sate & Glabed', type: 'Kuliner' },
-  { id: 'sejarah', name: 'Wisata Sejarah', icon: '🏛️', sub: 'Situs & Monumen', type: 'Wisata' },
-  { id: 'cafe', name: 'Cafe & Resto', icon: '☕', sub: 'Tempat Santai', type: 'Kuliner' },
-  { id: 'oleholeh', name: 'Oleh-Oleh Khas', icon: '🫖', sub: 'Tahu & Poci', type: 'Kuliner' },
+const FALLBACK_CATEGORIES = [
+  { id: 1, slug: 'alam', name: 'Wisata Alam', icon: '🌲', sub: 'Guci, Curug & Danau', type: 'Wisata' },
+  { id: 2, slug: 'bahari', name: 'Wisata Bahari', icon: '🌊', sub: 'Pantai & Pesisir', type: 'Wisata' },
+  { id: 3, slug: 'kuliner', name: 'Kuliner Tradisional', icon: '🍲', sub: 'Sate, Sauto & Glabed', type: 'Kuliner' },
+  { id: 4, slug: 'sejarah', name: 'Wisata Sejarah', icon: '🏛️', sub: 'Situs & Museum', type: 'Wisata' },
+  { id: 5, slug: 'hiburan', name: 'Taman & Hiburan', icon: '🎡', sub: 'Wahana & Rekreasi', type: 'Wisata' },
+  { id: 6, slug: 'oleholeh', name: 'Oleh-Oleh Khas', icon: '🫖', sub: 'Tahu Aci & Latopia', type: 'Kuliner' },
 ];
 
-// 2. Seluruh Database Destinasi (Ditandai mana yang unggulan / isFeatured)
-const ALL_DESTINATIONS = [
+const DEFAULT_HERO_SLIDES = [
   {
     id: 1,
-    title: 'Kawah / Pemandian Guci',
-    type: 'Wisata',
+    title: 'Kawah & Pemandian Air Hangat Guci',
     category: 'Wisata Alam',
-    rating: '5.0',
-    location: 'Bumijawa, Kab. Tegal',
-    price: 'Rp 20.000',
-    image: 'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=600&q=80',
-    description: 'Pemandian mata air panas alami dengan udara sejuk pegunungan.',
-    isFeatured: true, // UNGGULAN
-  },
-  {
-    id: 2,
-    title: 'Pantai Alam Indah',
     type: 'Wisata',
-    category: 'Wisata Bahari',
-    rating: '4.8',
-    location: 'Kota Tegal',
-    price: 'Rp 10.000',
-    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
-    description: 'Pantai pesisir utara dengan pemandangan ombak dan senja.',
-    isFeatured: true, // UNGGULAN
+    rating: 4.8,
+    reviews_count: 1420,
+    image: 'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1600&q=80',
   },
   {
     id: 3,
-    title: 'Sate Kambing Muda',
-    type: 'Kuliner',
+    title: 'Sate Kambing Muda Batibul',
     category: 'Kuliner Tradisional',
-    rating: '5.0',
-    location: 'Talang & Adiwerna',
-    price: 'Rp 45.000',
-    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80',
-    description: 'Daging empuk bawah tiga bulan disajikan segar di atas hotplate.',
-    isFeatured: true, // UNGGULAN
+    type: 'Kuliner',
+    rating: 4.9,
+    reviews_count: 2350,
+    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 2,
+    title: 'Pantai Alam Indah (PAI)',
+    category: 'Wisata Bahari',
+    type: 'Wisata',
+    rating: 4.6,
+    reviews_count: 980,
+    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 16,
+    title: 'Sauto Tegal Tauco Sedap Malam',
+    category: 'Kuliner Tradisional',
+    type: 'Kuliner',
+    rating: 4.9,
+    reviews_count: 3100,
+    image: 'https://images.unsplash.com/photo-1547928576-a4a33237cbc3?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 11,
+    title: 'Alun-Alun & Menara Air Heritage Tegal',
+    category: 'Wisata Sejarah',
+    type: 'Wisata',
+    rating: 4.8,
+    reviews_count: 1650,
+    image: 'https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=1600&q=80',
   },
   {
     id: 4,
-    title: 'Tahu Aci',
+    title: 'Tahu Aci Banjaran Slawi',
+    category: 'Oleh-Oleh Khas',
     type: 'Kuliner',
-    category: 'Oleh-Oleh',
-    rating: '4.9',
-    location: 'Slawi, Kab. Tegal',
-    price: 'Rp 15.000',
-    image: 'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&fit=crop&w=600&q=80',
-    description: 'Tahu kuning khas potongan segitiga dengan aci gurih renyah.',
-    isFeatured: true, // UNGGULAN
+    rating: 4.8,
+    reviews_count: 870,
+    image: 'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 10,
+    title: 'Pantai Muarareja Indah',
+    category: 'Wisata Bahari',
+    type: 'Wisata',
+    rating: 4.6,
+    reviews_count: 820,
+    image: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1600&q=80',
   },
   {
     id: 5,
-    title: 'Kupat Glabed',
-    type: 'Kuliner',
+    title: 'Kupat Glabed Ibu Wartini',
     category: 'Kuliner Tradisional',
-    rating: '4.7',
-    location: 'Kota Tegal',
-    price: 'Rp 15.000',
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
-    description: 'Kupat berkuah kental kuning gurih dengan taburan kerupuk mi.',
-    isFeatured: true, // UNGGULAN
-  },
-  {
-    id: 6,
-    title: 'Waduk Cacaban',
-    type: 'Wisata',
-    category: 'Wisata Alam',
-    rating: '4.5',
-    location: 'Kedungbanteng, Kab. Tegal',
-    price: 'Rp 10.000',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80',
-    description: 'Pemandangan danau buatan dengan latar bukit hijau dan perahu wisata.',
-    isFeatured: false, // BUKAN UNGGULAN (Muncul saat dicari)
-  },
-  {
-    id: 7,
-    title: 'Teh Poci Tradisional Wasgitel',
     type: 'Kuliner',
-    category: 'Kuliner Tradisional',
-    rating: '4.9',
-    location: 'Slawi & Tegal Kota',
-    price: 'Rp 8.000',
-    image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=600&q=80',
-    description: 'Seduhan teh poci tanah liat dengan pemanis gula batu asli khas Tegal.',
-    isFeatured: false,
-  },
-  {
-    id: 8,
-    title: 'Curug Cantel Bumijawa',
-    type: 'Wisata',
-    category: 'Wisata Alam',
-    rating: '4.7',
-    location: 'Bumijawa, Kab. Tegal',
-    price: 'Rp 10.000',
-    image: 'https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=600&q=80',
-    description: 'Air terjun alami tersembunyi dengan ketinggian sekitar 60 meter berhawa dingin.',
-    isFeatured: false,
+    rating: 4.7,
+    reviews_count: 620,
+    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1600&q=80',
   },
 ];
 
 export default function Home() {
+  const { user, token } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Semua');
+  const [destinations, setDestinations] = useState([]);
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
+  const [loading, setLoading] = useState(true);
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  // LOGIKA PENCARIAN CERDAS:
-  // - Jika search kosong: hanya tampilkan item dengan isFeatured: true
-  // - Jika sedang mengetik search: cari ke SEMUA destinasi tanpa membatasi isFeatured
-  const filteredHighlights = ALL_DESTINATIONS.filter((item) => {
+  // Ambil data real dari MySQL Database via Express API
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        setLoading(true);
+        const promises = [fetchDestinations(), fetchCategories()];
+        if (token) {
+          promises.push(fetchFavoriteIds(token));
+        }
+
+        const [destData, catData, favIds] = await Promise.all(promises);
+
+        if (isMounted) {
+          if (destData && destData.length > 0) {
+            setDestinations(destData);
+          }
+          if (catData && catData.length > 0) {
+            setCategories(catData);
+          }
+          if (favIds) {
+            setFavoriteIds(favIds);
+          }
+        }
+      } catch (err) {
+        console.warn('Backend API memuat fallback:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => { isMounted = false; };
+  }, [token]);
+
+  // Ambil destinasi wisata & kuliner terpopuler secara selang-seling (Wisata -> Kuliner -> Wisata -> Kuliner...)
+  const heroSlides = React.useMemo(() => {
+    const scoreFn = (d) =>
+      (parseFloat(d.rating) || 0) * 1000 + (parseInt(d.reviews_count || d.reviewsCount, 10) || 0);
+
+    const wisataList = destinations
+      .filter((d) => d.type === 'Wisata' && d.image)
+      .sort((a, b) => scoreFn(b) - scoreFn(a));
+
+    const kulinerList = destinations
+      .filter((d) => d.type === 'Kuliner' && d.image)
+      .sort((a, b) => scoreFn(b) - scoreFn(a));
+
+    if (wisataList.length === 0 && kulinerList.length === 0) {
+      return DEFAULT_HERO_SLIDES;
+    }
+
+    // Selang-seling: Wisata, Kuliner, Wisata, Kuliner...
+    const interleaved = [];
+    const maxItems = Math.max(wisataList.length, kulinerList.length);
+    for (let i = 0; i < maxItems && interleaved.length < 8; i++) {
+      if (wisataList[i]) interleaved.push(wisataList[i]);
+      if (kulinerList[i]) interleaved.push(kulinerList[i]);
+    }
+
+    return interleaved.length > 0 ? interleaved : DEFAULT_HERO_SLIDES;
+  }, [destinations]);
+
+  // Auto slide berganti setiap 3.8 detik (durasi pas: tidak terlalu cepat, tidak terlalu lambat)
+  useEffect(() => {
+    if (!heroSlides || heroSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 3800);
+
+    return () => clearInterval(timer);
+  }, [heroSlides]);
+
+  const activeSlide = heroSlides[currentSlide] || heroSlides[0];
+
+  const handleToggleFav = async (e, destId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      alert('Silakan masuk (login) terlebih dahulu untuk menyimpan destinasi favorit!');
+      return;
+    }
+
+    try {
+      const res = await toggleFavorite(destId, token);
+      if (res.isFavorited) {
+        setFavoriteIds((prev) => [...prev, destId]);
+      } else {
+        setFavoriteIds((prev) => prev.filter((id) => id !== destId));
+      }
+    } catch (err) {
+      alert('Gagal memperbarui favorit: ' + err.message);
+    }
+  };
+
+  // Filter destinasi:
+  const filteredHighlights = destinations.filter((item) => {
     const isSearching = searchQuery.trim().length > 0;
     const matchesFeatured = isSearching ? true : item.isFeatured;
     const matchesFilter = selectedFilter === 'Semua' || item.type === selectedFilter;
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          item.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          item.category.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      (item.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.location || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.category || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesFeatured && matchesFilter && matchesSearch;
   });
@@ -131,60 +210,36 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col justify-between">
       
-      {/* 1. NAVBAR */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Link to="/" className="text-2xl font-black text-emerald-700 tracking-tight">
-              Destina<span className="text-amber-500">Taste</span>
-            </Link>
-          </div>
+      {/* 1. NAVBAR DENGAN ROLE SELECTOR (PENGUNJUNG, PENGGUNA, ADMIN) */}
+      <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} showSearch={true} />
 
-          <nav className="hidden md:flex items-center gap-8 font-medium text-sm text-slate-600">
-            <Link to="/" className="text-emerald-700 font-bold border-b-2 border-emerald-700 pb-1">Beranda</Link>
-            <Link to="/katalog?type=Wisata" className="hover:text-emerald-700 transition">Wisata</Link>
-            <Link to="/katalog?type=Kuliner" className="hover:text-emerald-700 transition">Kuliner</Link>
-            <a href="#rekomendasi" className="hover:text-emerald-700 transition">Rekomendasi</a>
-            <Link to="/katalog" className="hover:text-emerald-700 transition">Katalog Lengkap</Link>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            {/* Input Pencarian Navbar */}
-            <div className="relative hidden lg:block">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari wisata atau kuliner Tegal..."
-                className="bg-slate-100 rounded-full pl-9 pr-4 py-2 text-xs w-60 focus:outline-emerald-600 border border-slate-200"
-              />
-              <svg className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M16.65 11a5.65 5.65 0 11-11.3 0 5.65 5.65 0 0111.3 0z" />
-              </svg>
-            </div>
-            <button className="text-xs sm:text-sm font-semibold text-slate-700 hover:text-emerald-700 px-3 py-2">Masuk</button>
-            <button className="bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-semibold px-5 py-2 rounded-full transition shadow-xs">Daftar</button>
-          </div>
-        </div>
-      </header>
-
-      {/* 2. HERO SECTION */}
+      {/* 2. HERO SECTION DENGAN SLIDER OTOMATIS & KLIK DETAIL */}
       <section id="hero" className="w-full px-4 sm:px-6 lg:px-8 pt-4 pb-6 max-w-7xl mx-auto">
         <div className="relative w-full rounded-3xl overflow-hidden min-h-[440px] md:min-h-[480px] flex items-center shadow-sm">
-          <img
-            src="https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1600&q=80"
-            alt="Wisata Alam Guci Tegal"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/90 via-emerald-900/65 to-transparent"></div>
+          {/* SLIDES GAMBAR DENGAN TRANSISI HALUS (FADE) */}
+          {heroSlides.map((slide, idx) => (
+            <img
+              key={slide.id || idx}
+              src={slide.image}
+              alt={slide.title}
+              loading="eager"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+                idx === currentSlide ? 'opacity-100 z-0' : 'opacity-0 z-0 pointer-events-none'
+              }`}
+            />
+          ))}
 
-          <div className="relative z-10 max-w-xl pl-8 sm:pl-12 lg:pl-14 pr-6 py-10 text-white">
+          {/* GRADIENT OVERLAY EMERALD (MEMPERTAHANKAN DESAIN ASLI & TEKS JELAS) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/90 via-emerald-900/65 to-transparent pointer-events-none z-10"></div>
+
+          {/* KONTEN TEKS & TOMBOL (DESAIN TIDAK DIUBAH) */}
+          <div className="relative z-20 max-w-xl pl-8 sm:pl-12 lg:pl-14 pr-6 py-10 text-white">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold tracking-tight leading-tight">
               Jelajahi Pesona &amp;<br />
               Cita Rasa Khas Tegal
             </h1>
             <p className="mt-4 text-xs sm:text-sm text-slate-100/90 leading-relaxed max-w-md font-sans">
-              Temukan destinasi wisata alam memukau dan kelezatan kuliner legendaris dalam satu genggaman.
+              Temukan pesona wisata alam memukau, kelezatan kuliner legendaris, dan panduan perjalanan terbaik untuk pengalaman liburan tak terlupakan di Tegal.
             </p>
             
             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -203,22 +258,34 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="absolute bottom-4 right-6 bg-black/40 backdrop-blur-xs px-3.5 py-1 rounded-md text-[11px] sm:text-xs text-white/95">
-            Wisata Alam Guci Tegal
-          </div>
+          {/* POJOK KANAN BAWAH: MURNI TULISAN TANPA CARD / BOX (BISA DIKLIK DETAIL) */}
+          <Link
+            to={`/detail/${activeSlide.id}`}
+            key={activeSlide.id}
+            className="absolute bottom-4 right-6 z-20 text-[11px] sm:text-xs text-white/90 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)] group"
+            title={`Klik untuk melihat detail ${activeSlide.title}`}
+          >
+            <span className="font-semibold group-hover:underline">
+              {activeSlide.title}{' '}
+              <span className="text-white/80 font-normal">
+                (<span className="text-amber-400 font-semibold">★</span> {parseFloat(activeSlide.rating || 4.5).toFixed(1)} &bull; {Number(activeSlide.reviews_count || activeSlide.reviewsCount || 0).toLocaleString('id-ID')} ulasan)
+              </span>
+            </span>
+            <span className="text-[10px] text-white/70 group-hover:text-white group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+          </Link>
         </div>
       </section>
 
-      {/* 3. KATEGORI CEPAT */}
+      {/* 3. KATEGORI CEPAT DARI DATABASE */}
       <section id="kategori" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
         <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-4">Bagian Kategori Cepat</h2>
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           
-          <div className="lg:col-span-7 grid grid-cols-3 sm:grid-cols-5 gap-3">
-            {INITIAL_CATEGORIES.map((cat) => (
+          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            {categories.slice(0, 6).map((cat) => (
               <Link
-                key={cat.id}
+                key={cat.id || cat.slug}
                 to={`/katalog?type=${cat.type}`}
                 className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center text-center hover:border-emerald-500 transition-all cursor-pointer"
               >
@@ -230,7 +297,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Link to="/katalog?type=Kuliner" className="bg-emerald-50/70 border border-emerald-100 hover:border-emerald-400 rounded-2xl p-4 flex items-center justify-between transition">
               <div>
                 <span className="font-bold text-xs sm:text-sm text-emerald-950 block">Oleh-Oleh</span>
@@ -241,8 +308,8 @@ export default function Home() {
 
             <Link to="/detail/4" className="bg-emerald-50/70 border border-emerald-100 hover:border-emerald-400 rounded-2xl p-4 flex items-center justify-between transition">
               <div>
-                <span className="font-bold text-xs sm:text-sm text-emerald-950 block">Tahu aci</span>
-                <span className="font-semibold text-xs text-emerald-800">khas Tegal</span>
+                <span className="font-bold text-xs sm:text-sm text-emerald-950 block">Tahu Aci</span>
+                <span className="font-semibold text-xs text-emerald-800">Banjaran Slawi</span>
               </div>
               <div className="text-3xl">🥟</div>
             </Link>
@@ -251,7 +318,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. REKOMENDASI TERPOPULER (DENGAN HASIL PENCARIAN REAL-TIME) */}
+      {/* 4. REKOMENDASI TERPOPULER DARI DATABASE */}
       <section id="rekomendasi" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
           <div>
@@ -259,7 +326,7 @@ export default function Home() {
               {searchQuery ? `Hasil Pencarian: "${searchQuery}"` : 'Bagian Rekomendasi Terpopuler'}
             </h2>
             <p className="text-xs text-slate-500">
-              {searchQuery ? `Ditemukan ${filteredHighlights.length} destinasi` : 'Wisata Populer & Kuliner Legendaris'}
+              {searchQuery ? `Ditemukan ${filteredHighlights.length} destinasi` : 'Pilihan destinasi wisata favorit dan kuliner legendaris khas Tegal'}
             </p>
           </div>
 
@@ -280,8 +347,18 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Jika Hasil Pencarian Kosong */}
-        {filteredHighlights.length === 0 ? (
+        {/* Loading state skeleton */}
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map((idx) => (
+              <div key={idx} className="bg-white rounded-2xl p-3 border border-slate-100 animate-pulse">
+                <div className="h-32 sm:h-36 bg-slate-200 rounded-xl mb-3"></div>
+                <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : filteredHighlights.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-dashed border-slate-200">
             <p className="text-slate-500 text-xs sm:text-sm">
               Tidak ditemukan tempat dengan kata kunci "{searchQuery}".
@@ -295,12 +372,35 @@ export default function Home() {
                 key={item.id}
                 className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col cursor-pointer block group"
               >
-                <div className="h-32 sm:h-36 w-full overflow-hidden bg-slate-100">
+                <div className="h-32 sm:h-36 w-full overflow-hidden bg-slate-100 relative">
                   <img
                     src={item.image}
                     alt={item.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    loading="lazy"
                   />
+                  {/* TOMBOL FAVORIT CARD */}
+                  <button
+                    onClick={(e) => handleToggleFav(e, item.id)}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 hover:bg-white backdrop-blur-xs flex items-center justify-center shadow-xs transition hover:scale-110 z-10 cursor-pointer"
+                    title={favoriteIds.includes(item.id) ? 'Hapus favorit' : 'Tambah favorit'}
+                  >
+                    <svg
+                      className={`w-4 h-4 ${
+                        favoriteIds.includes(item.id)
+                          ? 'fill-rose-500 text-rose-500'
+                          : 'fill-none text-slate-400 stroke-2'
+                      }`}
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                      />
+                    </svg>
+                  </button>
                 </div>
 
                 <div className="p-3 flex-1 flex flex-col justify-between">
@@ -309,8 +409,9 @@ export default function Home() {
                       {item.title}
                     </h3>
                     <div className="flex items-center gap-1 text-[11px] text-amber-500 mt-1">
-                      <span>★★★★★</span>
-                      <span className="text-[10px] text-slate-400">({item.rating})</span>
+                      <span>★</span>
+                      <span className="font-bold text-slate-700">{item.rating}</span>
+                      <span className="text-[10px] text-slate-400">({item.reviews_count || item.reviewsCount || 0})</span>
                     </div>
                   </div>
 
@@ -335,21 +436,21 @@ export default function Home() {
               <span className="text-xl font-black text-emerald-700 tracking-tight">
                 Destina<span className="text-amber-500">Taste</span>
               </span>
-              <p className="text-xs text-slate-500 mt-2">
-                Portal informasi dan eksplorasi destinasi wisata serta kekayaan kuliner khas Tegal.
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                Panduan digital terpercaya untuk menjelajahi keindahan alam, kekayaan budaya, dan kenikmatan kuliner legendaris khas Tegal.
               </p>
             </div>
             <div>
-              <h4 className="font-bold text-xs uppercase text-slate-900 mb-2">Navigasi</h4>
-              <p className="text-xs text-slate-500">Beranda • Wisata Alam Guci • Sate Kambing Batibul • Tahu Aci Slawi</p>
+              <h4 className="font-bold text-xs uppercase text-slate-900 mb-2">Destinasi Populer</h4>
+              <p className="text-xs text-slate-500">Pemandian Guci • Pantai PAI • Sate Batibul • Sauto Tauco • Tahu Aci</p>
             </div>
             <div>
-              <h4 className="font-bold text-xs uppercase text-slate-900 mb-2">Teknologi</h4>
-              <p className="text-xs text-slate-400 font-medium">React.js • Tailwind CSS • Vite</p>
+              <h4 className="font-bold text-xs uppercase text-slate-900 mb-2">Layanan Cerdas</h4>
+              <p className="text-xs text-slate-500 font-medium">Asisten AI 24/7 • Rencana Perjalanan • Ulasan Wisatawan</p>
             </div>
           </div>
           <div className="border-t border-slate-100 pt-4 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} Destinataste. Seluruh hak cipta dilindungi.
+            © {new Date().getFullYear()} DestinaTaste. Jelajahi, Nikmati, dan Rayakan Pesona Tegal.
           </div>
         </div>
       </footer>

@@ -5,14 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.js",
+    "ai": "python server/gemini_web2api/gemini_web2api.py --port 8081",
+    "dev:all": "concurrently -n \"VITE,SERVER,AI\" -c \"cyan,magenta,green\" \"npm run dev\" \"npm run server\" \"npm run ai\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "leaflet": "^1.9.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.5"
   },
   "devDependencies": {
@@ -21,6 +26,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.6.2",
+    "concurrently": "^10.0.6",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
