@@ -7,15 +7,43 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Node dependencies
+node_modules/
+server/node_modules/
+
+# Production build output
+dist/
+dist-ssr/
+
+# Environment variables & secrets (JANGAN DI-COMMIT!)
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
 *.local
+
+# Uploaded user images (kecuali file placeholder .gitkeep)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Python cache & virtual environments (gemini-web2api)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+server/gemini_web2api/venv/
+server/gemini_web2api/.venv/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*

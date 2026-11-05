@@ -1,0 +1,28 @@
+FROM node:20-bookworm-slim
+
+# Install Python 3, pip, and curl for gemini-web2api & healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-venv \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Node dependencies
+COPY server/package*.json ./
+RUN npm install --production
+
+# Install Python dependencies for gemini-web2api
+RUN pip3 install --no-cache-dir --break-system-packages httpx
+
+# Copy server application code
+COPY server/ ./
+
+# Pastikan folder uploads tersedia
+RUN mkdir -p uploads
+
+EXPOSE 5000
+
+CMD ["node", "index.js"]

@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # 1. DATABASE MYSQL
+  db:
+    image: mysql:8.0
+    container_name: destinataste_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: destinataste_db
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-prootpassword']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. BACKEND API & AI ENGINE
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: destinataste_backend
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: destinataste_db
+      DB_PORT: 3306
+      JWT_SECRET: destinataste_super_secret_jwt_key_2026
+      GEMINI_PROXY_PORT: 8081
+    ports:
+      - '5000:5000'
+    volumes:
+      - upload_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 3. FRONTEND CLIENT (NGINX)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: destinataste_frontend
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  upload_data:
